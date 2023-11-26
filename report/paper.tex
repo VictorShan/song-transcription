@@ -6,6 +6,10 @@
 \usepackage{xcolor}
 \usepackage{blindtext}
 
+% Paper requirement 1.5 line spacing. Remove for github publishing
+\usepackage{setspace}
+\onehalfspacing
+
 \title{Automatic Lyric Transcription}
 \author{Victor Shan}
 \begin{document}
@@ -15,6 +19,64 @@
 \begin{abstract}
 \blindtext
 \end{abstract}
+
+\section{Introduction}
+\begin{itemize}
+    \item What is Automatic Lyric Transcription?
+    \item Why is it important?
+    \item What are the challenges? (Why can't we use ASR?)
+    \item What are the applications?
+    \item What is the expected output?
+\end{itemize}
+
+
+\section{Datasets}
+\begin{itemize}
+    \item What are the requirements for a dataset?
+    \item Why are there so few datasets?
+    \item Challenges of creating new datasets?
+    \item What are the existing datasets?
+\end{itemize}
+\subsection{Dataset Augmentation}
+\subsubsection{SpecAugment}
+\subsubsection{Transforming Existing Datasets}
+\subsubsection{Student-Teacher Approach}
+
+\subsection{Existing Datasets}
+\subsubsection{TIMIT}
+\subsubsection{LibriSpeech}
+\subsubsection{JamendoLyrics}
+Remember to record the performance of the state of the art models on this dataset
+\subsubsection{Children's Songs Dataset}
+\subsubsection{MUSDB18}
+\subsubsection{NUS Dataset}
+\subsubsection{Other Datasets}
+\begin{itemize}
+    \item DALI
+    \item DAMP! (Stanford - Smule dataset)
+    \item
+\end{itemize}
+
+\section{Related Works}
+\subsection{Early HMM-Based Acoustic Models}
+\subsection{Music Informed Models}
+\subsection{wav2vec 2.0 and Transfer Learning}
+\subsection{Whisper Word-Level Alignment}
+
+\section{Method}
+
+\section{Results}
+
+\subsection{WER}
+
+\subsection{PER}
+
+\section{Discussion}
+
+\section{Future Work}
+\subsection{Adversarial Training}
+
+\section{Conclusion}
 
 \section*{Scholarly Articles}
 \begin{enumerate}
