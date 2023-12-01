@@ -1,7 +1,5 @@
-*.aux
-*.bbl
-*.blg
-*.log
-*.fdb_latexmk
-*.fls
-*.synctex.gz
+*
+!*.tex
+!.gitignore
+!*.bib
+!*.pdf
