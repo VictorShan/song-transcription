@@ -169,11 +169,16 @@ is a good candidate for training AST models because it is publicly available and
 makes it an excellent benchmark to compare against other models. However, it is still a relatively
 small dataset and does not contain any phoneme sequences. The authors of this dataset were able to
 achieve a 77.8\% Word Error Rate (WER) which still leaves a lot of room for improvement.
-{
-\color{red}
-Remember to record the performance of the state of the art models on this dataset
-}
-% \subsubsection{Children's Songs Dataset} All Korean :(
+
+\subsubsection{Children's Songs Dataset}
+This is a dataset of 50 English and 50 Korean children's songs with grapheme level timestamps and
+pitches. This dataset was sung by a single professional Korean singer in two separate keys for each
+song \citep{ChildrensSongs}. This dataset is a good candidate for training AST models because it
+includes the onset and offset information, pitch, and grapheme level timestamps that could be
+preprocessed to phoneme or word level timestamps. It is also a very clean dataset because of the
+professional performance and setting. The downside of this dataset is that graphemes are
+not as popular as phonemes, word or utterance labels in either ASR or AST.
+
 \subsubsection{MUSDB18}
 MUSEDB18 is a dataset of 150 songs with isolated vocals and accompaniment tracks \citep{musdb18}. This
 dataset is a good candidate for training AST models because it is publicly available and it has
@@ -210,12 +215,12 @@ popular datasets such as Mauch's Dataset \citep{mirex2021} and Hansen's Dataset 
 not publicly available anymore. Newer datasets such as DALI \citep{DALI} and DAMP! \citep{DAMP} are
 are hidden behind institutional logins and require manually requesting access.
 
-While both the Mauch's Dataset and Hansen's Datasets are quite small (Mauch has 20 songs, Hansen has 9 \citep{mirex2021}), the
-DALI and DAMP! datasets are much larger. The DALI dataset in particular used a version of the
-Teacher Student technique mentioned in \ref{sec:TeacherStudent} to label 105 songs with timestamps
-for the word and phoneme level \citep{DALI}. The DAMP! dataset is even larger with 300x30x2 song
-dataset. Both of these datasets would be excellent candidates for training AST models from their
-size alone.
+While both the Mauch's Dataset and Hansen's Datasets are quite small (Mauch has 20 songs, Hansen has
+9 \citep{mirex2021}), the DALI and DAMP! datasets are much larger. The DALI dataset in particular
+used a version of the Teacher Student technique mentioned in \ref{sec:TeacherStudent} to label 105
+songs with timestamps for the word and phoneme level \citep{DALI}. The DAMP! dataset is even larger
+with 300x30x2 song dataset. Both of these datasets would be excellent candidates for training AST
+models from their size alone.
 
 \section{Related Works}
 \subsection{HMM Based Acoustic Models}
@@ -227,6 +232,8 @@ approach to ASR and is also used in AST \citep{Hansen}.
 
 {
 \color{red}
+Other models focus on the transcription of notes instead of lyrics. These models use a similar
+to the ones that are transcribing lyrics
 TODO: Add more detail about HMMs
 TODO: Write about Dynamic Time Warping
 TODO: Write about some results of HMMs
@@ -294,9 +301,9 @@ for faster training and inference times.
 
 For the word alignment task, WhisperX uses an external phoneme alignment approach to generate
 word level timestamps using phoneme level timestamps \citep{whisperX}. The external phoneme
-alignment model was actually a wav2vec 2.0 model that used Dynamic Time Warping (DTW) to align
-the phonemes \citep{whisperX}. The first and last phonemes of each word were used to generate
-the word level timestamps \citep{whisperX}.
+alignment model was actually a wav2vec 2.0 model that used Dynamic Time Warping (DTW) \cite{DTW}
+to align the phonemes \citep{whisperX}. The first and last phonemes of each word were used to
+generate the word level timestamps \citep{whisperX}.
 
 The most important improvement of WhisperX over Whisper is VAD Cut \& Merge technique. This
 technique uses a Voice Activity Detection (VAD) model to cut the audio into segments at low voice
@@ -307,23 +314,68 @@ Whisper had to process sequenctially \citep{whisperX}.
 
 
 \section{Method}
-\begin{enumerate}
-    \item Preprocess datasets
-    \item Augment datasets
-    \item Create frankenstein dataset
-    \item Train model
-    \item Evaluate model
-    \item Label unlabeled datasets
-    \item train student model on newly labeled datasets
-    \item evaluate student model on original, manually labeled datasets
-    \item repeat
-\end{enumerate}
+In order to produce a model that can perform AST, we train a model to first take the audio and align
+it with the lyrics like in the last step of the WhisperX pipeline. This helps us create a model that
+can poperly annotate phonemes from the audio. Then, a secondary model can be trained to take the
+audio and the phoneme annotations to generate the lyrics. With both a lyric and phoneme generator,
+any song will be able to be transcribed into lyrics and time-aligned phonemes for an end-to-end AST.
+
+Each step in this process allows for the use of teacher-student techniques mentioned in section
+\ref{sec:TeacherStudent} to generate more labeled data from unlabeled data. This is important
+because there are so few labeled datasets available for AST.
+
+\subsection{Preprocessing Datasets}
+To preprocess datasets, the audio files were preprocessed in the same way WhisperX preprocessed
+data with the VAD Cut \& Merge technique \citep{whisperX} except with a slight modification before
+trying to detect voices. Since the audio files were songs, most of them will have both singing and
+background music. This means that the VAD model will have a harder time detecting when the singing
+stops. To help the VAD model, the audio files were first passed through Demucs v4 \citep{Demucs}
+to separate the vocals from the background music. Then, the VAD model was used to detect the
+voices. Finally, the audio files were cut into segments at the detected voice sections. To reduce
+memory requirements and because lyrics utterances are often shorter than 30 seconds, the segments
+will be cut into 8-15 second segments. Segments that are shorter than 8 seconds can either be padded
+or merged with other segments into segments of 8-15 seconds.
+
+The first subsystem of our AST model will be to take the audio and generate the phoneme annotations.
+This subsystem will be trained and tested on the TIMIT, Children's Song and NUS datasets. These are
+all datasets that contain phoneme level annotations. TIMIT, although it is a speech dataset, can be
+transformed into a pseudo-singing dataset as mentioned in \ref{sec:pseudoSinging} or used directly
+as a different variety of vocalizing phonemes.
+
+\subsection{Augmenting Datasets}
+There are many ways to augment datasets. The three ways mentioned in SpecAugment includes
+time warping, frequency masking and time masking \citep{SpecAugment}. These techniques can be
+applied to the audio spectrogram before it is fed into the model. Time warping is a technique that
+stretches or compresses the audio spectrogram in the time dimension so it must be handled carefully
+to update the labels accodingly. Another way to augment the datasets is to transform the audio
+pitch. This can be done by shifting the pitch up or down.
+
+% \subsection{Combining Datasets}
+
+\section{Training}
+
+
+% \begin{enumerate}
+%     \item Preprocess datasets
+%     \item Augment datasets
+%     \item Create frankenstein dataset
+%     \item Train model
+%     \item Evaluate model
+%     \item Label unlabeled datasets
+%     \item train student model on newly labeled datasets
+%     \item evaluate student model on original, manually labeled datasets
+%     \item repeat
+% \end{enumerate}
 
 \section{Results}
 
-\subsection{WER}
+\subsection{VAD Performance}
 
-\subsection{PER}
+\subsection{Phoneme Alignment Performance}
+% PER
+
+\subsection{Lyric Generation Performance}
+% WER
 
 \section{Discussion}
 
@@ -331,10 +383,12 @@ Whisper had to process sequenctially \citep{whisperX}.
 \subsection{Adversarial Training}
 \subsection{Transform Singing to Speech Data}
 remove pitch from singing
+\subsection{Phoneme to Grapheme}
+\citep{G2P} or \citep{P2G}
 
 
 \section{Conclusion}
-
+\citep{pyannote}
 \printbibliography
 
 \end{multicols*}
