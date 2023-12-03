@@ -36,22 +36,15 @@ class UtilsTestCase(unittest.TestCase):
         return vocals_path
 
     def testVadCut(self):
-        vocals_path = self.testDemucs()
-        filename = self.SAMPLE_MP3.stem
-        output_dir = Path(f"{self.OUTPUT_DIR}/{filename}/cut")
         pipeline = get_voice_activity_segments()
         vad_cuts = vad_cut(
             pipeline=pipeline,
-            audio_filepath=vocals_path,
-            output_dir=output_dir,
+            audio_filepath=self.SAMPLE_MP3,
         )
-        self.assertTrue(output_dir.exists())
+        file = vad_cuts[0].filepath
         for cut in vad_cuts:
             self.assertTrue(cut.filepath.exists())
-            cut.filepath.unlink()
-        output_dir.rmdir()
-        vocals_path.unlink()
-        output_dir.parent.rmdir()
+            self.assertTrue(cut.filepath == file)
 
 
 if __name__ == "__main__":
