@@ -1,0 +1,5 @@
+*.DOC
+*.TXT
+*.csv
+data
+timit_dataset
