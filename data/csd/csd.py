@@ -170,6 +170,7 @@ test_valid = dataset["test"].train_test_split(test_size=0.5, seed=42)
 dataset["test"] = test_valid["test"]
 dataset["validation"] = test_valid["train"]
 dataset = dataset.cast_column("filename", Audio(sampling_rate=16000))
+dataset = dataset.rename_column("filename", "audio")
 dataset.save_to_disk(FILE_DIR/"csd_dataset")
 # %% Cleanup segments directory
 for file in (FILE_DIR/"segments").glob("*.wav"):
