@@ -1,7 +1,9 @@
 from pathlib import Path
-from pyannote.audio import Pipeline
+from typing import Optional
+from pyannote.audio import Pipeline, Model, Inference
 from .env import HF_TOKEN
 from dataclasses import dataclass
+from .whisperX.vad import load_vad_model, VoiceActivitySegmentation, merge_chunks
 import demucs.separate
 import os
 import torch
@@ -45,29 +47,29 @@ class TimedAnnotation:
     def duration(self) -> int:
         return self.end - self.start
 
-def vad_cut(audio_filepath: Path, output_dir: Path, max_duration_sec: float, max_silence_sec: float) -> list[VadCut]:
-    pipeline = Pipeline.from_pretrained(
-        "pyannote/speaker-diarization-3.1",
-        use_auth_token=HF_TOKEN,
-    )
-    pipeline.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
-    print("========== Audio File", audio_filepath)
-    diarization = pipeline(audio_filepath)
-    valid_segements = []
-    for segment, label in diarization.itertracks(yield_label=False):
-        if len(valid_segements) == 0:
-            valid_segements.append(TimedAnnotation(segment.start, segment.end, label))
-        else:
-            last_segment = valid_segements[-1]
-            segment_duration_sec = segment.end - segment.start
-            if last_segment.duration() + segment_duration_sec < max_duration_sec \
-                    and segment.start - last_segment.end < max_silence_sec:
-                last_segment.end = segment.end
-            else:
-                valid_segements.append(TimedAnnotation(segment.start, segment.end, label))
+def get_voice_activity_segments() -> VoiceActivitySegmentation:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return load_vad_model(device, vad_offset=0.5)
+
+def vad_cut(
+        pipeline: VoiceActivitySegmentation,
+        audio_filepath: Path,
+        output_dir: Path,
+        max_duration_sec: float=10,
+        onset: float = 0.5,
+        offset: Optional[float] = None,
+    ) -> list[VadCut]:
+
+    segments = pipeline(audio_filepath)
+    output = merge_chunks(segments, max_duration_sec, onset=onset, offset=offset)
+
+    valid_segments = []
+    for segment in output:
+        print(f'{segment["end"] - segment["start"]:0.3f}', segment)
+        valid_segments.append(TimedAnnotation(segment["start"], segment["end"], segment["segments"]))
 
     valid_cuts = []
-    for segment in valid_segements:
+    for segment in valid_segments:
         segment_filepath = Path(f"{output_dir}/{audio_filepath.stem}_{segment.start}_{segment.end}.wav")
         segment_filepath.parent.mkdir(parents=True, exist_ok=True)
         os.system(f"ffmpeg -i {audio_filepath} -ss {segment.start} -to {segment.end} -c copy {segment_filepath}")

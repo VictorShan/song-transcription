@@ -6,7 +6,7 @@ class UtilsTestCase(unittest.TestCase):
     OUTPUT_DIR = Path("data/test_output")
     # https://ccmixter.org/files/admiralbob77/65751
     SAMPLE_MP3 = Path("data/admiralbob77_-_Creator_of_the_Stars_At_Night_3.mp3")
-    vocals_path = None
+
 
     @classmethod
     def setUpClass(cls):
@@ -14,9 +14,7 @@ class UtilsTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if False and cls.vocals_path and cls.vocals_path.exists():
-            cls.vocals_path.unlink()
-        if False and cls.OUTPUT_DIR.exists():
+        if cls.OUTPUT_DIR.exists():
             cls.OUTPUT_DIR.rmdir()
 
     # @unittest.skip("Skip testDemucs")
@@ -40,15 +38,19 @@ class UtilsTestCase(unittest.TestCase):
     def testVadCut(self):
         vocals_path = self.testDemucs()
         filename = self.SAMPLE_MP3.stem
-        output_dir = Path(f"{self.OUTPUT_DIR}/cut/{filename}")
+        output_dir = Path(f"{self.OUTPUT_DIR}/{filename}/cut")
+        pipeline = get_voice_activity_segments()
         vad_cuts = vad_cut(
+            pipeline=pipeline,
             audio_filepath=vocals_path,
-            output_dir=self.OUTPUT_DIR,
-            max_duration_sec=10,
-            max_silence_sec=2,
+            output_dir=output_dir,
         )
         self.assertTrue(output_dir.exists())
+        for cut in vad_cuts:
+            self.assertTrue(cut.filepath.exists())
+            cut.filepath.unlink()
         output_dir.rmdir()
+        vocals_path.unlink()
         output_dir.parent.rmdir()
 
 
