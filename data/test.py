@@ -17,7 +17,6 @@ class UtilsTestCase(unittest.TestCase):
         if cls.OUTPUT_DIR.exists():
             cls.OUTPUT_DIR.rmdir()
 
-    # @unittest.skip("Skip testDemucs")
     def testDemucs(self):
         separate_vocals(
             filepath=[self.SAMPLE_MP3],
@@ -33,7 +32,8 @@ class UtilsTestCase(unittest.TestCase):
         self.assertTrue(vocals_path.exists())
         self.assertTrue(no_vocals_path.exists())
         no_vocals_path.unlink()
-        return vocals_path
+        vocals_path.unlink()
+        output_dir.rmdir()
 
     def testVadCut(self):
         pipeline = get_voice_activity_segments()

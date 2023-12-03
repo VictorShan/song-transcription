@@ -65,7 +65,3 @@ def vad_cut(
         valid_cuts.append(VadCut(audio_filepath, dataset, annotation.duration()*1000))
     return valid_cuts
 
-
-
-
-
