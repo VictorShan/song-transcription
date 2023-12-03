@@ -1,7 +1,10 @@
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass
-from .whisperX.vad import load_vad_model, VoiceActivitySegmentation, merge_chunks
+import sys
+if str(Path(__file__).parent) not in sys.path:
+    sys.path.append(str(Path(__file__).parent))
+from whisperX.vad import load_vad_model, VoiceActivitySegmentation, merge_chunks
 import demucs.separate
 import torch
 
@@ -30,12 +33,6 @@ def separate_vocals(
     demucs.separate.main(arguments)
 
 @dataclass
-class VadCut:
-    filepath: Path
-    dataset: str
-    duration_ms: int
-
-@dataclass
 class TimedAnnotation:
     start: int
     end: int
@@ -43,6 +40,12 @@ class TimedAnnotation:
 
     def duration(self) -> int:
         return self.end - self.start
+
+@dataclass
+class VadCut:
+    filepath: Path
+    dataset: str
+    annotation: TimedAnnotation
 
 def get_voice_activity_pipeline() -> VoiceActivitySegmentation:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -62,6 +65,6 @@ def vad_cut(
     valid_cuts = []
     for segment in output:
         annotation = TimedAnnotation(segment["start"], segment["end"], segment["segments"])
-        valid_cuts.append(VadCut(audio_filepath, dataset, annotation.duration()*1000))
+        valid_cuts.append(VadCut(audio_filepath, dataset, annotation))
     return valid_cuts
 
