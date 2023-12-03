@@ -44,7 +44,7 @@ class TimedAnnotation:
     def duration(self) -> int:
         return self.end - self.start
 
-def get_voice_activity_segments() -> VoiceActivitySegmentation:
+def get_voice_activity_pipeline() -> VoiceActivitySegmentation:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     return load_vad_model(device, vad_offset=0.5)
 

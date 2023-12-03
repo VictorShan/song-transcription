@@ -36,7 +36,7 @@ class UtilsTestCase(unittest.TestCase):
         output_dir.rmdir()
 
     def testVadCut(self):
-        pipeline = get_voice_activity_segments()
+        pipeline = get_voice_activity_pipeline()
         vad_cuts = vad_cut(
             pipeline=pipeline,
             audio_filepath=self.SAMPLE_MP3,
