@@ -115,7 +115,8 @@ class NUS_Segment:
             "end": self.end,
             "duration": self.duration,
             "filename": str(self.segment_filename),
-            "phonemes": self.phonemes,
+            "timestamped_phonemes": self.phonemes,
+            "phonemes": [phoneme["phoneme"] for phoneme in self.phonemes],
         }
 #%%
 songs = []
