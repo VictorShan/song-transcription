@@ -117,38 +117,35 @@ class JamendoLyics_Segment:
 
 
 #%%
-df = pd.read_csv(FILE_DIR/"data/JamendoLyrics.csv")
-df = df[df["Language"] == "English"]
-df.head()
-
-# %%
-songs = []
-for _, row in tqdm(df.iterrows(), total=len(df)):
-    songs.append(JamendoLyrics_Song(
-        artist=row["Artist"],
-        title=row["Title"],
-        genre=row["Genre"],
-        language=row["Language"],
-        filename=row["Filepath"][:-4],
-    ))
-# %%
-segments = []
-for song in tqdm(songs):
-    for segment in song.get_segments():
-        segments.append(segment)
-segments[0]
-# %%
-with open(FILE_DIR/"jamendolyrics.jsonl", "w") as f:
-    for segment in tqdm(segments):
-        f.write(json.dumps(segment.json_dict) + "\n")
-print(cmudict.unknown)
+def create_jamendo_jsonl():
+    df = pd.read_csv(FILE_DIR/"data/JamendoLyrics.csv")
+    df = df[df["Language"] == "English"]
+    songs = []
+    for _, row in tqdm(df.iterrows(), total=len(df)):
+        songs.append(JamendoLyrics_Song(
+            artist=row["Artist"],
+            title=row["Title"],
+            genre=row["Genre"],
+            language=row["Language"],
+            filename=row["Filepath"][:-4],
+        ))
+    segments = []
+    for song in tqdm(songs):
+        for segment in song.get_segments():
+            segments.append(segment)
+    segments[0]
+    with open(FILE_DIR/"jamendolyrics.jsonl", "w") as f:
+        for segment in tqdm(segments):
+            f.write(json.dumps(segment.json_dict) + "\n")
 #%%
-dataset = Dataset.from_json(str(FILE_DIR/"jamendolyrics.jsonl"))
-dataset = dataset.cast_column("filename", Audio(sampling_rate=16_000)).rename_column("filename", "audio")
-dataset.save_to_disk(FILE_DIR/"jamendolyrics_dataset")
 
-# %% Cleanup segments directory
-for file in (FILE_DIR/"segments").glob("*.mp3"):
-    file.unlink()
-(FILE_DIR/"segments").rmdir()
-#%%
+def get_jamendo():
+    if not (FILE_DIR/"jamendolyrics.jsonl").exists():
+        create_jamendo_jsonl()
+    dataset = Dataset.from_json(str(FILE_DIR/"jamendolyrics.jsonl"))
+    dataset = dataset.cast_column("filename", Audio(sampling_rate=16_000)).rename_column("filename", "audio")
+    # dataset.save_to_disk(FILE_DIR/"jamendolyrics_dataset")
+    for file in (FILE_DIR/"segments").glob("*.mp3"):
+        file.unlink()
+    (FILE_DIR/"segments").rmdir()
+    return dataset

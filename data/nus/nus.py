@@ -14,9 +14,11 @@ if str(FILE_DIR.parent) not in sys.path:
 else:
     print("DATA_DIR already in sys.path", sys.path)
 from utils import get_voice_activity_pipeline, vad_cut, VadCut
+from CMUdict.utils import CMUDict
 
 #%%
 pipeline = get_voice_activity_pipeline()
+cmudict = CMUDict()
 #%%
 @dataclass
 class NUS_Song:
@@ -44,10 +46,11 @@ class NUS_Song:
         with open(DATA_DIR/self.singer/self.read_sing_dir/f"{self.song}.txt", "r") as f:
             for line in f.readlines():
                 start, end, phoneme = line.strip().split()
+                # print(self, start, end, phoneme)
                 phonemes.append({
                     "start": float(start),
                     "end": float(end),
-                    "phoneme": phoneme.upper(),
+                    "phoneme": cmudict.map_phoneme(phoneme),
                 })
         return phonemes
 
@@ -77,7 +80,7 @@ class NUS_Segment:
 
     @property
     def segment_filename(self) -> Path:
-        path = FILE_DIR / f"segments/{self.song.singer}_{'read' if self.song.is_read else 'sing'}_{self.start}_{self.end}.wav"
+        path = FILE_DIR / f"segments/{self.song.singer}_{self.song.song}_{'read' if self.song.is_read else 'sing'}_{self.start}_{self.end}.wav"
         if not path.parent.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
@@ -119,50 +122,59 @@ class NUS_Segment:
             "phonemes": [phoneme["phoneme"] for phoneme in self.phonemes],
         }
 #%%
-songs = []
-for singer in DATA_DIR.iterdir():
-    if singer.is_dir():
-        for read_sing_dir in singer.iterdir():
-            if read_sing_dir.is_dir():
-                items = set()
-                for file in read_sing_dir.iterdir():
-                    if file.is_file():
-                        items.add(file.stem)
-                for item in items:
-                    if read_sing_dir.name == "read":
-                        is_read = True
-                        is_sing = False
-                    elif read_sing_dir.name == "sing":
-                        is_read = False
-                        is_sing = True
-                    else:
-                        raise Exception("Unknown read_sing_dir name")
-                    song = NUS_Song(
-                        singer=singer.name,
-                        song=item,
-                        is_read=is_read,
-                        is_sing=is_sing,
-                    )
-                    songs.append(song)
+def create_nus_jsonl():
+    songs = []
+    for singer in DATA_DIR.iterdir():
+        if singer.is_dir():
+            for read_sing_dir in singer.iterdir():
+                if read_sing_dir.is_dir():
+                    items = set()
+                    for file in read_sing_dir.iterdir():
+                        if file.is_file():
+                            items.add(file.stem)
+                    for item in items:
+                        if read_sing_dir.name == "read":
+                            is_read = True
+                            is_sing = False
+                        elif read_sing_dir.name == "sing":
+                            is_read = False
+                            is_sing = True
+                        else:
+                            raise Exception("Unknown read_sing_dir name")
+                        song = NUS_Song(
+                            singer=singer.name,
+                            song=item,
+                            is_read=is_read,
+                            is_sing=is_sing,
+                        )
+                        songs.append(song)
+    with open(FILE_DIR/"nus.jsonl", "w") as f:
+        for song in tqdm(songs, total=len(songs)):
+            for segment in song.get_segements():
+                f.write(json.dumps(segment.json_dict))
+                f.write("\n")
+        f.flush()
+    print(len(cmudict.seen), cmudict.seen)
 #%%
-with open(FILE_DIR/"nus.jsonl", "w") as f:
-    for song in tqdm(songs, total=len(songs)):
-        for segment in song.get_segements():
-            f.write(json.dumps(segment.json_dict))
-            f.write("\n")
-    f.flush()
+def get_nus():
+    if not (FILE_DIR/"nus.jsonl").exists():
+        create_nus_jsonl()
+    dataset = Dataset.from_json(str(FILE_DIR/"nus.jsonl"))
+    dataset = dataset.train_test_split(test_size=0.2, seed=42)
+    validation_test = dataset["test"].train_test_split(test_size=0.5, seed=42)
+    dataset["test"] = validation_test["test"]
+    dataset["validation"] = validation_test["train"]
+    dataset = dataset.cast_column("filename", Audio(sampling_rate=16000))
+    dataset = dataset.rename_column("filename", "audio")
+    # dataset.save_to_disk(FILE_DIR/"nus_dataset")
+    # Cleanup segments directory
+
+    return dataset
+
 #%%
-dataset = Dataset.from_json(str(FILE_DIR/"nus.jsonl"))
-dataset = dataset.train_test_split(test_size=0.2, seed=42)
-validation_test = dataset["test"].train_test_split(test_size=0.5, seed=42)
-dataset["test"] = validation_test["test"]
-dataset["validation"] = validation_test["train"]
-dataset = dataset.cast_column("filename", Audio(sampling_rate=16000))
-dataset = dataset.rename_column("filename", "audio")
-#%%
-dataset.save_to_disk(FILE_DIR/"nus_dataset")
-# %% Cleanup segments directory
-for file in (FILE_DIR/"segments").glob("*.wav"):
-    file.unlink()
-(FILE_DIR/"segments").rmdir()
-#%%
+get_nus()
+# %%
+# for file in (FILE_DIR/"segments").glob("*.wav"):
+#     file.unlink()
+# (FILE_DIR/"segments").rmdir()
+# %%

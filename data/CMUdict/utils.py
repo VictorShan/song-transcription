@@ -3,6 +3,8 @@ from pathlib import Path
 
 FILE_DIR = Path(__file__).parent
 
+UNK = "[UNK]"
+PAD = "[PAD]"
 additional_words = {
     "WASTIN'": "W EY1 S T IH0 NG".split(),
     "LA": "L AA1".split(),
@@ -41,11 +43,31 @@ misspellings = {
     "PARLIMENT": "PARLIAMENT"
 }
 
+# TimitBet 61 phoneme mapping to 39 phonemes
+# by Lee, K.-F., & Hon, H.-W. (1989). Speaker-independent phone recognition using hidden Markov models. IEEE Transactions on Acoustics, Speech, and Signal Processing, 37(11), 1641–1648. doi:10.1109/29.46546
+phon61_map39 = {
+    'iy':'iy',  'ih':'ih',   'eh':'eh',  'ae':'ae',    'ix':'ih',  'ax':'ah',   'ah':'ah',  'uw':'uw',
+    'ux':'uw',  'uh':'uh',   'ao':'aa',  'aa':'aa',    'ey':'ey',  'ay':'ay',   'oy':'oy',  'aw':'aw',
+    'ow':'ow',  'l':'l',     'el':'l',  'r':'r',      'y':'y',    'w':'w',     'er':'er',  'axr':'er',
+    'm':'m',    'em':'m',     'n':'n',    'nx':'n',     'en':'n',  'ng':'ng',   'eng':'ng', 'ch':'ch',
+    'jh':'jh',  'dh':'dh',   'b':'b',    'd':'d',      'dx':'dx',  'g':'g',     'p':'p',    't':'t',
+    'k':'k',    'z':'z',     'zh':'sh',  'v':'v',      'f':'f',    'th':'th',   's':'s',    'sh':'sh',
+    'hh':'hh',  'hv':'hh',   'pcl':'sil', 'tcl':'sil', 'kcl':'sil', 'qcl':'sil','bcl':'sil','dcl':'sil',
+    'gcl':'sil','h#':'sil',  '#h':'sil',  'pau':'sil', 'epi': 'sil','nx':'n',   'ax-h':'ah','q':'sil',
+    'sil': 'sil', UNK: UNK,  PAD: PAD, "sp": "sil"
+}
+PHON61_MAP39 = {}
+for key, value in phon61_map39.items():
+    PHON61_MAP39[key.upper()] = value.upper()
+
+VOCAB = { phoneme: i  for i, phoneme in enumerate(set(PHON61_MAP39.values())) }
+VOCAB["|"] = len(VOCAB)
 @dataclass
 class CMUDict:
     def __init__(self):
         self.map = {}
         self.unknown = []
+        self.seen = set()
         ## Load CMUdict
         with open(FILE_DIR/"cmudict-0.7b.txt", "r") as f:
             for line in f:
@@ -58,19 +80,33 @@ class CMUDict:
         for misspelling, spelling in misspellings.items():
             self.map[misspelling] = self.map[spelling]
 
-
-    def get_phonemes(self, word: str) -> list[str]:
-        """Get phonemes for a given word.
+    def get_raw_phonemes(self, word: str) -> list[str]:
+        """Get raw phonemes for a given word.
 
         Args:
             word (str): The word to get phonemes for.
 
         Returns:
-            list[str]: The phonemes for the given word.
+            list[str]: The raw phonemes for the given word.
         """
         word = word.upper()
         if word in self.map:
             return self.map[word.upper()]
         else:
             self.unknown.append(word)
-        return ["UNK"]
+        return [UNK]
+
+    def map_phoneme(self, phoneme):
+        phoneme = phoneme.upper()
+        if phoneme[-1].isdigit():
+            phoneme = phoneme[:-1]
+        result = PHON61_MAP39.get(phoneme, UNK)
+        self.seen.add(result)
+        return result
+
+    def get_phonemes(self, word: str) -> list[str]:
+        raw_phonemes = self.get_raw_phonemes(word)
+        phonemes = []
+        for raw_phoneme in raw_phonemes:
+            phonemes.append(self.map_phoneme(raw_phoneme))
+        return phonemes
