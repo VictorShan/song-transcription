@@ -3,7 +3,6 @@ from dataclasses import dataclass
 import json
 import pandas as pd
 import subprocess
-import numpy as np
 from tqdm import tqdm
 import sys
 from pathlib import Path
@@ -13,8 +12,6 @@ if str(DATA_DIR) not in sys.path:
     sys.path.append(str(DATA_DIR))
 else:
     print("DATA_DIR already in sys.path", sys.path)
-from constants import *
-np.random.seed(42)
 # %%
 metadata = pd.read_json(FILE_DIR/"english/metadata.json", orient="index")
 metadata.head()
@@ -131,49 +128,48 @@ def get_segments(song: CSD_Song) -> list[CSD_Segment]:
     return segments
 
 #%%
-song = CSD_Song("en001a", "Alphabet")
-segments = get_segments(song)
-segments
+# song = CSD_Song("en001a", "Alphabet")
+# segments = get_segments(song)
+# segments
 
 # %%
-split = {
-    "train": 0.8,
-    "validation": 0.1,
-    "test": 0.1
-}
-id = 0
-with open(FILE_DIR/"csd.jsonl", "w") as f:
-    for song_id, row in tqdm(metadata.iterrows(), total=len(metadata)):
-        song = CSD_Song(song_id, row["songname"])
-        segments = get_segments(song)
-        for segment in segments:
-            segment_dict = {
-                "id": id,
-                "song_id": segment.song_id,
-                "song_name": segment.song_name,
-                "start": segment.start,
-                "end": segment.end,
-                "filename": str(segment.segment_filename),
-                "phonemes": " ".join(segment.cmu_phonemes),
-                "lyrics": segment.lyrics,
-            }
-            id += 1
-            f.write(f'{json.dumps(segment_dict)}\n')
-    f.flush()
-f.close()
+def create_csd_jsonl():
+    id = 0
+    with open(FILE_DIR/"csd.jsonl", "w") as f:
+        for song_id, row in tqdm(metadata.iterrows(), total=len(metadata)):
+            song = CSD_Song(song_id, row["songname"])
+            segments = get_segments(song)
+            for segment in segments:
+                segment_dict = {
+                    "id": id,
+                    "song_id": segment.song_id,
+                    "song_name": segment.song_name,
+                    "start": segment.start,
+                    "end": segment.end,
+                    "filename": str(segment.segment_filename),
+                    "phonemes": " ".join(segment.cmu_phonemes),
+                    "lyrics": segment.lyrics,
+                }
+                id += 1
+                f.write(f'{json.dumps(segment_dict)}\n')
+        f.flush()
 
 # %%
 from datasets import Dataset, Audio
-dataset = Dataset.from_json(str(FILE_DIR/"csd.jsonl"))
-dataset = dataset.train_test_split(test_size=0.2, seed=42)
-test_valid = dataset["test"].train_test_split(test_size=0.5, seed=42)
-dataset["test"] = test_valid["test"]
-dataset["validation"] = test_valid["train"]
-dataset = dataset.cast_column("filename", Audio(sampling_rate=16000))
-dataset = dataset.rename_column("filename", "audio")
-dataset.save_to_disk(FILE_DIR/"csd_dataset")
+def create_csd_dataset():
+    if not (FILE_DIR/"csd.jsonl").exists():
+        create_csd_jsonl()
+    dataset = Dataset.from_json(str(FILE_DIR/"csd.jsonl"))
+    dataset = dataset.train_test_split(test_size=0.2, seed=42)
+    test_valid = dataset["test"].train_test_split(test_size=0.5, seed=42)
+    dataset["test"] = test_valid["test"]
+    dataset["validation"] = test_valid["train"]
+    dataset = dataset.cast_column("filename", Audio(sampling_rate=16000))
+    dataset = dataset.rename_column("filename", "audio")
+    # dataset.save_to_disk(FILE_DIR/"csd_dataset")
+    return dataset
 # %% Cleanup segments directory
-for file in (FILE_DIR/"segments").glob("*.wav"):
-    file.unlink()
-(FILE_DIR/"segments").rmdir()
+# for file in (FILE_DIR/"segments").glob("*.wav"):
+#     file.unlink()
+# (FILE_DIR/"segments").rmdir()
 # %%
