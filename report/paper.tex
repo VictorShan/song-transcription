@@ -7,7 +7,7 @@
 \usepackage{xcolor}
 \usepackage{blindtext}
 
-\usepackage[%
+\usepackage[
 backend=biber,
 natbib=true,
 % style=apa,
@@ -21,6 +21,8 @@ style=ieee
 
 \title{Automatic Singing Transcription}
 \author{Victor Shan}
+
+
 \begin{document}
 \maketitle
 \begin{multicols*}{2}
@@ -89,7 +91,20 @@ there are so few datasets available and why most of the existing datasets are sm
 Due to the lack of datasets, it is more important to make the most of the existing datasets. One
 way to do this is to augment the existing datasets. SpecAugment is a series of techniques that
 augment the audio spectrogram to improve the performance of ASR models. A frequent intermediate
-representation are Mel-Frequency Cepstral Coefficients (MFCC). These are image representations of
+representation are Mel-Frequency Cepstral Coefficients (MFCC).
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=0.4\textwidth]{assets/waveform-to-spectrogram-sing.png}
+    \includegraphics[width=0.4\textwidth]{assets/melspectrogram-mfcc.png}
+    \caption{Waveform (top left) can be transformed into a spectrogram (bottom left).
+    The spectrogram can be transformed to use the Mel scale in Mel Spectrogram (top right,
+    only first section shows) which can futher be transformed into a more discrete MFCC.
+    Figures inspired by torchaudio \citep{torchAudioFigures}.}
+    \label{fig:MFCC}
+\end{figure*}
+
+These are image representations of
 energy at certain frequencies on a scale that more closely matches human hearing \citep{MFCC}.
 These techniques include time warping, frequency masking and time masking \citep{SpecAugment}.
 Time warping is a technique that stretches or compresses the audio spectrogram in the time
@@ -292,7 +307,7 @@ the paper. It was more of a proof of concept that the same model can be used for
 \citep{whisper}. WhisperX is a model that was trained specifically for word-level alignment and
 the speedup of the Whisper model \citep{whisperX}.
 
-On the TED-LIUM dataset, a dataset of TED talks \cite{tedlium3}, WhisperX was able to acheive a
+On the TED-LIUM dataset, a dataset of TED talks \citep{tedlium3}, WhisperX was able to acheive a
 11.8x speedup over Whisper. This is comparable to wav2vec 2.0 which was a 10.3x speedup over
 Whisper. However, WhisperX was also able to achieve a WER of 9.7 compared to the 10.5 WER from
 Whisper and 19.8 WER from wav2vec 2.0 \citep{whisperX}. This is a significant improvement over
@@ -301,7 +316,7 @@ for faster training and inference times.
 
 For the word alignment task, WhisperX uses an external phoneme alignment approach to generate
 word level timestamps using phoneme level timestamps \citep{whisperX}. The external phoneme
-alignment model was actually a wav2vec 2.0 model that used Dynamic Time Warping (DTW) \cite{DTW}
+alignment model was actually a wav2vec 2.0 model that used Dynamic Time Warping (DTW) \citep{DTW}
 to align the phonemes \citep{whisperX}. The first and last phonemes of each word were used to
 generate the word level timestamps \citep{whisperX}.
 
