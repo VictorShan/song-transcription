@@ -19,7 +19,7 @@ style=ieee
 \usepackage{setspace}
 \onehalfspacing
 
-\title{Automatic Singing Transcription}
+\title{Automatic Singing Transcription: Phonemes and Alignment}
 \author{Victor Shan}
 
 
@@ -90,8 +90,8 @@ there are so few datasets available and why most of the existing datasets are sm
 \subsubsection{SpecAugment}
 Due to the lack of datasets, it is more important to make the most of the existing datasets. One
 way to do this is to augment the existing datasets. SpecAugment is a series of techniques that
-augment the audio spectrogram to improve the performance of ASR models. A frequent intermediate
-representation are Mel-Frequency Cepstral Coefficients (MFCC).
+augment the audio spectrogram to improve the performance of ASR models. A common variation of this
+representation is the Mel-Frequency Cepstral Coefficient (MFCC) spectrogram.
 
 \begin{figure*}
     \centering
@@ -113,7 +113,10 @@ the audio spectrogram. Time masking is a technique that masks a random number of
 in the audio spectrogram. These techniques are used to augment the audio spectrogram before it
 is fed into the ASR model. \citep{SpecAugment}
 
-% ----------------- INCLUDE MFCC IMAGE -----------------
+{
+    \centering
+    \includegraphics[width=0.45\textwidth]{assets/specaugment.png}
+}
 
 \subsubsection{Transforming Existing Datasets Into Pseudo-Singing Datasets} \label{sec:pseudoSinging}
 Another way to augment the existing datasets is to transform the existing datasets. This can be
@@ -126,7 +129,7 @@ transformed TIMIT dataset than ones trained on the original TIMIT dataset \citep
 \subsubsection{Transforming Utterance level datasets into Phoneme level datasets} \label{sec:utteranceToPhoneme}
 A technique from ASR that can also be applied to AST is transforming utterance/sentence
 level datasets into phoneme level datasets. There are many ASR datasets that contain single utterances
-such as LibriSpeech and MUSDB18 \citep{Librispeech,musdb18}. These datasets can be effectively
+such as LibriSpeech and JamendoLyrics. These datasets can be effectively
 transformed into phoneme level datasets by using a phoneme dictionary such as the CMU Pronouncing
 Dictionary \citep{CMUDict}. This dictionary contains a mapping from words to phonemes. Using this
 dictionary, the utterances can be transformed into phoneme sequences. These sequences can then be
@@ -134,7 +137,7 @@ used with a Connectionist Temporal Classification (CTC) loss function to train A
 \begin{figure*}
     \centering
     \includegraphics[width=0.5\textwidth]{assets/CTC.png}
-    \caption{CTC Function collapsing repetitions \citep{CTC}}
+    \caption{Example of CTC Function collapsing repetitions. Image from \citep{CTC}}
     \label{fig:CTC}
 \end{figure*}
 CTC allows for the model to output a sequence of phonemes per time step and the
@@ -188,7 +191,7 @@ achieve a 77.8\% Word Error Rate (WER) which still leaves a lot of room for impr
 \subsubsection{Children's Songs Dataset}
 This is a dataset of 50 English and 50 Korean children's songs with grapheme level timestamps and
 pitches. This dataset was sung by a single professional Korean singer in two separate keys for each
-song \citep{ChildrensSongs}. This dataset is a good candidate for training AST models because it
+song \citep{CSD}. This dataset is a good candidate for training AST models because it
 includes the onset and offset information, pitch, and grapheme level timestamps that could be
 preprocessed to phoneme or word level timestamps. It is also a very clean dataset because of the
 professional performance and setting. The downside of this dataset is that graphemes are
@@ -348,8 +351,8 @@ stops. To help the VAD model, the audio files were first passed through Demucs v
 to separate the vocals from the background music. Then, the VAD model was used to detect the
 voices. Finally, the audio files were cut into segments at the detected voice sections. To reduce
 memory requirements and because lyrics utterances are often shorter than 30 seconds, the segments
-will be cut into 8-15 second segments. Segments that are shorter than 8 seconds can either be padded
-or merged with other segments into segments of 8-15 seconds.
+will be cut into 5-15 second segments. Smaller segments can either be padded
+or merged with other segments into larger ones.
 
 The first subsystem of our AST model will be to take the audio and generate the phoneme annotations.
 This subsystem will be trained and tested on the TIMIT, Children's Song and NUS datasets. These are
@@ -361,9 +364,8 @@ as a different variety of vocalizing phonemes.
 There are many ways to augment datasets. The three ways mentioned in SpecAugment includes
 time warping, frequency masking and time masking \citep{SpecAugment}. These techniques can be
 applied to the audio spectrogram before it is fed into the model. Time warping is a technique that
-stretches or compresses the audio spectrogram in the time dimension so it must be handled carefully
-to update the labels accodingly. Another way to augment the datasets is to transform the audio
-pitch. This can be done by shifting the pitch up or down.
+stretches or compresses the audio spectrogram in the time dimension due to the complexity of
+realigning the audio. We use time and frequency maksing for training our models.
 
 % \subsection{Combining Datasets}
 
@@ -384,17 +386,19 @@ pitch. This can be done by shifting the pitch up or down.
 
 \section{Results}
 
-\subsection{VAD Performance}
+% \subsection{VAD Performance}
 
 \subsection{Phoneme Alignment Performance}
 % PER
 
-\subsection{Lyric Generation Performance}
-% WER
+% \subsection{Lyric Generation Performance}
+% % WER
 
 \section{Discussion}
 
 \section{Future Work}
+\subsection{Train on More Datasets}
+\subsection{Finetuning Wav2Vec 2.0 Feature Extractor}
 \subsection{Adversarial Training}
 \subsection{Transform Singing to Speech Data}
 remove pitch from singing
