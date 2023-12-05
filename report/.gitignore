@@ -1,4 +1,4 @@
-*
+paper.*
 !*.tex
 !.gitignore
 !*.bib

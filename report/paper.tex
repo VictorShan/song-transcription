@@ -131,7 +131,8 @@ A technique from ASR that can also be applied to AST is transforming utterance/s
 level datasets into phoneme level datasets. There are many ASR datasets that contain single utterances
 such as LibriSpeech and JamendoLyrics. These datasets can be effectively
 transformed into phoneme level datasets by using a phoneme dictionary such as the CMU Pronouncing
-Dictionary \citep{CMUDict}. This dictionary contains a mapping from words to phonemes. Using this
+Dictionary \citep{CMUDict}. This dictionary contains a mapping from words to
+ARPAbet style phonemes \citep{CMUDict}. Using this
 dictionary, the utterances can be transformed into phoneme sequences. These sequences can then be
 used with a Connectionist Temporal Classification (CTC) loss function to train AST models \citep{CTC}.
 \begin{figure*}
@@ -158,7 +159,7 @@ of unlabeled data. Finally, a new model would be trained on the newly labeled da
 \citep{DALI}. This has proven to be effective for transcribing drums in music with the student
 model outperforming the teacher model \citep{DrumsStudentTeacher}.
 
-\subsection{Existing Datasets}
+\subsection{Existing Datasets} \label{sec:datasets}
 
 \subsubsection{TIMIT (ASR)}
 TIMIT is a dataset of speech recordings of 630 speakers of eight major dialects of American English
@@ -360,6 +361,15 @@ all datasets that contain phoneme level annotations. TIMIT, although it is a spe
 transformed into a pseudo-singing dataset as mentioned in \ref{sec:pseudoSinging} or used directly
 as a different variety of vocalizing phonemes.
 
+In order to transform these datsets into a valid input for the model, datasets that only contain
+utterances will be transformed into phoneme level datasets using the CMU Pronouncing Dictionary
+(CMUDict) and then tokenized. Luckily, the TIMIT dataset already uses an extended version of the
+ARPAbet phonemes so they can be remapped into a smaller subset of phonemes. The CMUDict also
+includes stresses in the form of numbers at the end of some phonemes that were removed. Finally,
+the unknown and padding tokens were added to the phoneme vocabulary. Any words that appeared in
+the datasets but were not in CMUDict were manually added to the dictionary. HuggingFace and PyTorch
+constructs to help with this process and allow for batching.
+
 \subsection{Augmenting Datasets}
 There are many ways to augment datasets. The three ways mentioned in SpecAugment includes
 time warping, frequency masking and time masking \citep{SpecAugment}. These techniques can be
@@ -371,6 +381,13 @@ realigning the audio. We use time and frequency maksing for training our models.
 
 \section{Training}
 
+\subsection{Base Model}
+In order to get a baseline for our improvements, we train a base model on the TIMIT dataset. This
+This dataset is a one of the most popular and defacto standard for ASR models that do phoneme
+recognition. The starting model that will be finetuned on TIMIT will be the `facebook/wav2vec2-base-960h'
+model from the HuggingFace \citep{huggingFaceWav2vec2}.
+
+\subsection{Singer Model}
 
 % \begin{enumerate}
 %     \item Preprocess datasets
@@ -387,6 +404,7 @@ realigning the audio. We use time and frequency maksing for training our models.
 \section{Results}
 
 % \subsection{VAD Performance}
+\subsection{Phoneme Recognition Performance}
 
 \subsection{Phoneme Alignment Performance}
 % PER
@@ -398,13 +416,40 @@ realigning the audio. We use time and frequency maksing for training our models.
 
 \section{Future Work}
 \subsection{Train on More Datasets}
-\subsection{Finetuning Wav2Vec 2.0 Feature Extractor}
-\subsection{Adversarial Training}
-\subsection{Transform Singing to Speech Data}
-remove pitch from singing
-\subsection{Phoneme to Grapheme}
-\citep{G2P} or \citep{P2G}
+Dispite the lack of datasets, there are still many datasets listed in section \ref{sec:datasets}
+that can be used to train AST models. Deep learning networks are known to perform better with more
+training data and the greater variety of data will allow the model to generalize better.
+datasets used in the training of our models were TIMIT and CSD. However, there are many genres of
+music that are not represented in children's songs such as rap.
 
+\subsection{Finetuning Wav2Vec 2.0 Feature Extractor}
+The FMA dataset described in section \ref{sec:datasets} can be used to finetune the wav2vec 2.0
+feature extractor. This will allow the model to learn features that are more specific to singing
+and music. This dataset will need some extra preprocessing to detect singing because the songs
+include music with no vocals. This can be done by using a VAD model to detect the singing and
+removing the parts of the audio that do not contain singing. The wav2vec 2.0 paper mentions how
+the model goes through self-supervised learning to learn discrete speech units \citep{wav2vec} and
+a large dataset like FMA will allow the model to learn discrete singing units.
+
+\subsection{Generative Adversarial Networks}
+Generative Adversarial Networks (GANs) are a type of neural network that can be used to generate
+new data and can have recently become popular with the success of Midjourney and
+Stable Diffusion. Voice synthesis and conversion have also improved with services that
+clone voices or text-to-speech services. The intersection of these technologies can
+be used to generate new songs. The songs that are generated do not need to be top highlights
+but plausible sounding songs that can be used to train AST models. Using a GAN can generate
+songs with more variety than the pitch shifted songs mentioned in \ref{sec:pseudoSinging} and
+can lead to better generalization.
+
+\subsection{Phoneme to Grapheme}
+One of the main applications of AST is to generate and sync lyrics to songs for karaoke
+applications. However, most people cannot read ARPAbet phonemes or IPA phonemes. Instead,
+they can read words and graphemes that form words. Phonemes and graphemes represent the same
+unit of sound but the graphemes are more readable because they are just chunks of the original word.
+This means that as the words are sung, each grapheme of the word can be highlighted individually.
+To get a grapheme output, the phoneme output can be converted to a grapheme output using a
+separate phoneme to grapheme model or generate character level output and align the characters and
+phonemes using the timestamps.
 
 \section{Conclusion}
 \citep{pyannote}
